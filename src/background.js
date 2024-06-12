@@ -1,21 +1,43 @@
-'use strict';
+let urls = [];
 
-// With background scripts you can communicate with popup
-// and contentScript files.
-// For more information on background script,
-// See https://developer.chrome.com/extensions/background_pages
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GREETINGS') {
-    const message = `Hi ${
-      sender.tab ? 'Con' : 'Pop'
-    }, my name is Bac. I am from Background. It's great to hear from you.`;
-
-    // Log message coming from the `request` parameter
-    console.log(request.payload.message);
-    // Send a response message
-    sendResponse({
-      message,
-    });
+//タブが変更されたとき
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    tabUpdate();
   }
 });
+
+//アクティブなタブが変更されたとき
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
+    if (tab.status === 'complete') {
+      tabUpdate();
+    }
+  });
+}); 
+
+function tabUpdate(){
+  let urls = getNoThumnailUrls();
+  urls.then((urls) => {
+    console.log(urls);
+  }).catch((error) => {
+    console.error(error);
+  });  
+}
+
+
+
+function getNoThumnailUrls() {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+      let tab = tabs[0];
+      chrome.tabs.sendMessage(tab.id, {action: "getNoThumnailUrls"}, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(response.urls);
+        }
+      });
+    });
+  });
+}
